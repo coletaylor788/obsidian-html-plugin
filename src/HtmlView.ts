@@ -39,6 +39,18 @@ export class HtmlView extends FileView {
 			}
 		} catch {}
 
+		// Capture the currently focused element so we can restore it after a
+		// reload. Some part of the reload pipeline (iframe srcdoc, contentEl.empty,
+		// or buildUserInteractiveFacilities) takes focus away from whatever pane
+		// the user was in — e.g. another plugin's pane in the same Obsidian window.
+		// Only restore on reload, not initial open (initial open should let the
+		// iframe focus normally so keyboard shortcuts work).
+		const isReload = !!this.mainView;
+		const prevActive = isReload ? (document.activeElement as HTMLElement | null) : null;
+		const prevActiveOutsideView = isReload && !!prevActive
+			&& prevActive !== document.body
+			&& !this.containerEl.contains(prevActive);
+
 		this.contentEl.empty();
 	
 		try {
@@ -144,6 +156,14 @@ export class HtmlView extends FileView {
 				// Restore scroll position after auto-refresh so the reader's place isn't lost.
 				if (savedScrollX || savedScrollY) {
 					try { iframe.contentWindow.scrollTo(savedScrollX, savedScrollY); } catch {}
+				}
+
+				// Restore focus to whatever pane was focused before the reload, if
+				// that element still exists and is outside this HTML view. Prevents
+				// auto-refresh from yanking focus from sibling Obsidian panes
+				// (e.g. another plugin like Claude Code in the same window).
+				if (prevActiveOutsideView && prevActive && document.body.contains(prevActive)) {
+					try { prevActive.focus({ preventScroll: true } as any); } catch {}
 				}
 			};
 			
