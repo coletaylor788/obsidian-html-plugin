@@ -28,7 +28,17 @@ export class HtmlView extends FileView {
 		// const width = parseFloat(style.width);
 		// const height = parseFloat(style.height);
 		// const tocOffset = height < width ? height : 0;
-	
+
+		// Preserve scroll position across reloads (auto-refresh on external file change).
+		let savedScrollX = 0, savedScrollY = 0;
+		try {
+			const prevIframe = this.mainView?.querySelector('#ohpIframe') as HTMLIFrameElement | null;
+			if (prevIframe && prevIframe.contentWindow) {
+				savedScrollX = prevIframe.contentWindow.scrollX || 0;
+				savedScrollY = prevIframe.contentWindow.scrollY || 0;
+			}
+		} catch {}
+
 		this.contentEl.empty();
 	
 		try {
@@ -122,14 +132,19 @@ export class HtmlView extends FileView {
 					await modifyAnchorTarget( iframe.contentDocument );
 					iframe.contentWindow.addEventListener( 'click', sdFixAnchorClickHandler );
 				}
-				
+
 				await restoreStateBySettings( iframe.contentWindow.document, iframe.mainView.settings );
 				buildUserInteractiveFacilities( iframe.mainView );
-				
+
 				// bubble iframe's 'keydown' event to parent (issue #16)
 				iframe.contentWindow.addEventListener( 'keydown', (evt) => {
 					iframe.dispatchEvent( new evt.constructor(evt.type, evt) );
 				}, false );
+
+				// Restore scroll position after auto-refresh so the reader's place isn't lost.
+				if (savedScrollX || savedScrollY) {
+					try { iframe.contentWindow.scrollTo(savedScrollX, savedScrollY); } catch {}
+				}
 			};
 			
 			dispatchEvent(new CustomEvent("DOMContentLoaded"));

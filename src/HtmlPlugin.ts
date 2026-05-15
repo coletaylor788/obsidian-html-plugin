@@ -1,4 +1,4 @@
-import { addIcon, Plugin, WorkspaceLeaf } from 'obsidian';
+import { addIcon, Plugin, TFile, WorkspaceLeaf } from 'obsidian';
 import { HtmlView, showError, HTML_FILE_EXTENSIONS, ICON_HTML, VIEW_TYPE_HTML, MHTML_FILE_EXTENSIONS } from './HtmlView';
 import { HtmlPluginSettings, HtmlSettingTab, DEFAULT_SETTINGS } from './HtmlPluginSettings';
 
@@ -38,6 +38,21 @@ export default class HtmlPlugin extends Plugin {
 		}
 		
 		this.addSettingTab(new HtmlSettingTab(this.app, this));
+
+		// Auto-refresh open HTML views when the underlying file changes on disk.
+		// Debounced per-leaf to coalesce rapid writes (editor saves, OneDrive sync).
+		const reloadTimers = new WeakMap<HtmlView, number>();
+		this.registerEvent(this.app.vault.on('modify', (file) => {
+			if (!(file instanceof TFile)) return;
+			this.app.workspace.getLeavesOfType(VIEW_TYPE_HTML).forEach((leaf: WorkspaceLeaf) => {
+				const view = leaf.view as HtmlView;
+				if (!(view instanceof HtmlView) || !view.file || view.file.path !== file.path) return;
+				const prev = reloadTimers.get(view);
+				if (prev) window.clearTimeout(prev);
+				const t = window.setTimeout(() => view.onLoadFile(file), 200);
+				reloadTimers.set(view, t);
+			});
+		}));
 	}
 
 	onunload() {
