@@ -738,7 +738,9 @@ async function buildUserInteractiveFacilities( mainView: HTMLElement ): Promise<
 	};
 	
 	const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-	iframe.contentWindow.focus();
+	// Only steal focus when Obsidian already has OS-level focus. Prevents
+	// auto-refresh from yanking focus away from another app (e.g. a terminal).
+	if (document.hasFocus()) iframe.contentWindow.focus();
 	
 	// add MenuItem polyfill methods
 	mainView.openSearch = () => {
