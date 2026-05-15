@@ -40,19 +40,48 @@ export default class HtmlPlugin extends Plugin {
 		this.addSettingTab(new HtmlSettingTab(this.app, this));
 
 		// Auto-refresh open HTML views when the underlying file changes on disk.
-		// Debounced per-leaf to coalesce rapid writes (editor saves, OneDrive sync).
+		// To avoid stealing OS-level focus from other apps (e.g. a terminal), we
+		// only reload while Obsidian is focused. If the file changes while
+		// Obsidian is in the background, the reload is deferred until Obsidian
+		// regains focus. Reloads are also debounced per leaf to coalesce rapid
+		// writes (editor saves, OneDrive sync).
 		const reloadTimers = new WeakMap<HtmlView, number>();
+		const pendingReloads = new WeakMap<HtmlView, TFile>();
+
+		const scheduleReload = (view: HtmlView, file: TFile) => {
+			const prev = reloadTimers.get(view);
+			if (prev) window.clearTimeout(prev);
+			const t = window.setTimeout(() => view.onLoadFile(file), 200);
+			reloadTimers.set(view, t);
+		};
+
 		this.registerEvent(this.app.vault.on('modify', (file) => {
 			if (!(file instanceof TFile)) return;
 			this.app.workspace.getLeavesOfType(VIEW_TYPE_HTML).forEach((leaf: WorkspaceLeaf) => {
 				const view = leaf.view as HtmlView;
 				if (!(view instanceof HtmlView) || !view.file || view.file.path !== file.path) return;
-				const prev = reloadTimers.get(view);
-				if (prev) window.clearTimeout(prev);
-				const t = window.setTimeout(() => view.onLoadFile(file), 200);
-				reloadTimers.set(view, t);
+				if (document.hasFocus()) {
+					scheduleReload(view, file);
+				} else {
+					pendingReloads.set(view, file);
+				}
 			});
 		}));
+
+		// When Obsidian regains focus, flush any deferred reloads.
+		const flushPending = () => {
+			this.app.workspace.getLeavesOfType(VIEW_TYPE_HTML).forEach((leaf: WorkspaceLeaf) => {
+				const view = leaf.view as HtmlView;
+				if (!(view instanceof HtmlView)) return;
+				const file = pendingReloads.get(view);
+				if (file && view.file && view.file.path === file.path) {
+					pendingReloads.delete(view);
+					scheduleReload(view, file);
+				}
+			});
+		};
+		window.addEventListener('focus', flushPending);
+		this.register(() => window.removeEventListener('focus', flushPending));
 	}
 
 	onunload() {
