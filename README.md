@@ -2,6 +2,12 @@
 
 This is a plugin for Obsidian (https://obsidian.md). Can open document with `.html`  and `.htm` file extensions.
 
+> **Fork notice.** This repository is a fork of [nuthrash/obsidian-html-plugin](https://github.com/nuthrash/obsidian-html-plugin) maintained by [@coletaylor788](https://github.com/coletaylor788). Changes in this fork:
+> - **Auto-refresh** the open HTML view when the underlying file changes on disk (debounced 200ms).
+> - **Preserve scroll position** across auto-refresh so the reader's place isn't lost.
+>
+> All upstream functionality is unchanged. Credit for the original plugin belongs to [Nuthrash](https://github.com/nuthrash).
+
 - [How to use](#how-to-use)
 - [Install this plugin from Obsidian](#install-this-plugin-from-obsidian)
 - [Manually installing the plugin](#manually-installing-the-plugin)

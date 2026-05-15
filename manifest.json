@@ -4,7 +4,7 @@
 	"version": "1.0.15",
 	"minAppVersion": "0.15.3",
 	"description": "This is a HTML file reader plugin for Obsidian. Can open document with \".html\" and \".htm\" file extensions.",
-	"author": "Nuthrash",
-	"authorUrl": "https://github.com/nuthrash/obsidian-html-plugin",
+	"author": "coletaylor788",
+	"authorUrl": "https://github.com/coletaylor788/obsidian-html-plugin",
 	"isDesktopOnly": false
 }
